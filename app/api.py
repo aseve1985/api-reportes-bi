@@ -4,6 +4,17 @@ import numpy as np
 from .redshift import ejecutar_query_redshift
 from .config import query, API_KEY
 
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+from fastapi.middleware.cors import CORSMiddleware
+
+
+class ReporteVentasResponse(BaseModel):
+    status: str
+    rows: int
+    data: List[Dict[str, Any]]
+
 
 API_KEY_SGURIDAD = API_KEY
 
@@ -18,6 +29,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health")
 def health():
@@ -28,17 +47,15 @@ def root():
     return {"message": "API Reportes BI funcionando"}    
 
 
-@app.get("/reportes/ventas")
+@app.get("/reportes/ventas", response_model=ReporteVentasResponse)
 def reporte_ventas(
-    fecha_desde: str = Query(..., examples={"default": {"value": "2025-01-01"}}),
-    fecha_hasta: str = Query(..., examples={"default": {"value": "2025-01-31"}}),
+    fecha_desde: str = Query(..., example="2025-01-01"),
+    fecha_hasta: str = Query(..., example="2025-01-31"),
     x_api_key: str = Header(None)
 ):
     verificar_api_key(x_api_key)
 
-    df = ejecutar_query_redshift(
-        (fecha_desde, fecha_hasta)
-    )
+    df = ejecutar_query_redshift((fecha_desde, fecha_hasta))
 
     df = df.replace({np.nan: None})
 
