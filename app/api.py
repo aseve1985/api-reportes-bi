@@ -9,6 +9,8 @@ from typing import List, Dict, Any
 
 from fastapi.middleware.cors import CORSMiddleware
 
+import httpx
+
 
 class ReporteVentasResponse(BaseModel):
     status: str
@@ -72,6 +74,19 @@ def reporte_ventas(
         "data": df.to_dict(orient="records")
     }
 
+
+@app.get("/proxy/ventas")
+async def proxy_ventas(
+    fecha_desde: str = Query(..., example="2025-01-01"),
+    fecha_hasta: str = Query(..., example="2025-01-31")
+):
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            "https://api-reportes-bi.onrender.com/reportes/ventas",
+            params={"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta},
+            headers={"x-api-key": API_KEY_SGURIDAD}
+        )
+        return r.json()
 
 
 
